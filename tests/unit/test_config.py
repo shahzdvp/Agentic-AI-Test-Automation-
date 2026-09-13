@@ -10,7 +10,7 @@ def test_settings_load_successfully():
     """Test that settings load correctly when all required env vars are present."""
     with patch.dict(os.environ, {"GOOGLE_API_KEY": "fake_key_123", "AI_TESTGEN_MODEL": "custom-model"}):
         settings = get_settings()
-        assert settings.google_api_key == "fake_key_123"
+        assert settings.google_api_key.get_secret_value() == "fake_key_123"
         assert settings.model_name == "custom-model"
         assert settings.max_retries == 3
         assert settings.temperature == 0.1

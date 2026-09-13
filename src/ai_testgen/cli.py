@@ -40,20 +40,8 @@ def generate(
         typer.secho("Failed to load configuration. Check GOOGLE_API_KEY.", fg=typer.colors.RED)
         raise typer.Exit(1)
 
-    parser = PythonASTParser()
-    generator = LangChainTestGenerator(
-        model_name=model,
-        api_key=settings.google_api_key.get_secret_value(),
-        temperature=settings.temperature
-    )
-    runner = PytestRunner()
-
-    orchestrator = FrameworkOrchestrator(
-        parser=parser,
-        generator=generator,
-        runner=runner,
-        max_retries=max_retries
-    )
+    from ai_testgen.factory import create_orchestrator
+    orchestrator = create_orchestrator(settings)
 
     if source.is_file():
         files_to_process = [source]

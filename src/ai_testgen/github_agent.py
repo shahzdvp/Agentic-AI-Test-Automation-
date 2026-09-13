@@ -97,16 +97,8 @@ def main():
     
     # 3. Initialize AI TestGen Framework
     settings = get_settings()
-    orchestrator = FrameworkOrchestrator(
-        parser=PythonASTParser(),
-        generator=LangChainTestGenerator(
-            model_name=settings.model_name,
-            api_key=settings.google_api_key.get_secret_value(),
-            temperature=settings.temperature
-        ),
-        runner=PytestRunner(),
-        max_retries=settings.max_retries
-    )
+    from ai_testgen.factory import create_orchestrator
+    orchestrator = create_orchestrator(settings)
     
     # 4. Generate Tests
     total_stats = {"tests_passed": 0, "retries_used": 0}

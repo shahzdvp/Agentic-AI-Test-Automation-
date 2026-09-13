@@ -27,7 +27,7 @@ def test_cli_version():
 
 
 @patch("ai_testgen.cli.get_settings")
-@patch("ai_testgen.cli.FrameworkOrchestrator")
+@patch("ai_testgen.factory.create_orchestrator")
 def test_cli_generate_success(mock_orchestrator_class, mock_get_settings, mock_settings, tmp_path):
     """Test generating tests via CLI."""
     mock_get_settings.return_value = mock_settings
@@ -57,7 +57,7 @@ def test_cli_generate_success(mock_orchestrator_class, mock_get_settings, mock_s
 
 
 @patch("ai_testgen.cli.get_settings")
-@patch("ai_testgen.cli.FrameworkOrchestrator")
+@patch("ai_testgen.factory.create_orchestrator")
 def test_cli_generate_failure(mock_orchestrator_class, mock_get_settings, mock_settings, tmp_path):
     """Test CLI when generation fails."""
     mock_get_settings.return_value = mock_settings
@@ -94,7 +94,7 @@ def test_cli_config_error(mock_get_settings, tmp_path):
     assert "Failed to load configuration" in result.stdout
 
 @patch("ai_testgen.cli.get_settings")
-@patch("ai_testgen.cli.FrameworkOrchestrator")
+@patch("ai_testgen.factory.create_orchestrator")
 def test_cli_generate_partial_success(mock_orchestrator_class, mock_get_settings, mock_settings, tmp_path):
     """Test CLI partial success logging."""
     mock_get_settings.return_value = mock_settings
@@ -119,7 +119,7 @@ def test_cli_generate_partial_success(mock_orchestrator_class, mock_get_settings
     assert "Partial success" in result.stdout
 
 @patch("ai_testgen.cli.get_settings")
-@patch("ai_testgen.cli.FrameworkOrchestrator")
+@patch("ai_testgen.factory.create_orchestrator")
 def test_cli_generate_failure(mock_orchestrator_class, mock_get_settings, mock_settings, tmp_path):
     """Test CLI when generation fails."""
     mock_get_settings.return_value = mock_settings
