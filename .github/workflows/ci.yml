@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [ "main" ]
 
+# Allow this workflow to write to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -30,10 +36,28 @@ jobs:
       run: |
         pytest tests/ -v --cov=src/ai_testgen --cov-report=html --cov-report=term-missing
         
-    - name: Upload Coverage HTML Report
+    - name: Upload Coverage HTML Report (ZIP Artifact)
       uses: actions/upload-artifact@v4
       if: always()
       with:
         name: coverage-report
         path: htmlcov/
         retention-days: 7
+
+    - name: Upload artifact for GitHub Pages
+      uses: actions/upload-pages-artifact@v3
+      if: github.ref == 'refs/heads/main'
+      with:
+        path: htmlcov/
+
+  deploy-pages:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
