@@ -20,23 +20,23 @@ def setup_logging(verbose: bool):
 
 @app.command()
 def generate(
-    source: Path = typer.Argument(..., help="Source file to test", exists=True, dir_okay=False),
+    source: Path = typer.Argument(..., help="Source file or directory to test", exists=True, dir_okay=True),
     output: Path | None = typer.Option(None, "--output", "-o", help="Output directory"),
     model: str = typer.Option("gemini-3.6-flash", "--model", "-m", help="Model name"),
     max_retries: int = typer.Option(3, "--max-retries", "-r", help="Maximum generation retries"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging")
 ):
-    """Generate tests for a given Python file."""
+    """Generate tests for a given Python file or an entire directory."""
     setup_logging(verbose)
 
     if output:
         output.mkdir(parents=True, exist_ok=True)
     else:
-        output = source.parent
+        output = source.parent if source.is_file() else source
 
     try:
         settings = get_settings()
-    except Exception as e:
+    except Exception:
         typer.secho("Failed to load configuration. Check GOOGLE_API_KEY.", fg=typer.colors.RED)
         raise typer.Exit(1)
 
@@ -55,21 +55,38 @@ def generate(
         max_retries=max_retries
     )
 
-    typer.secho(f"Generating tests for {source}...", fg=typer.colors.BLUE)
-    stats = orchestrator.process_file(source, output)
+    if source.is_file():
+        files_to_process = [source]
+    else:
+        files_to_process = [
+            f for f in source.rglob("*.py")
+            if f.is_file() and not f.name.startswith("test_") and f.name != "__init__.py"
+        ]
+        
+    if not files_to_process:
+        typer.secho(f"No valid Python files found in {source}", fg=typer.colors.YELLOW)
+        raise typer.Exit(0)
 
-    if stats["tests_passed"] > 0:
+    total_stats = {"total_units": 0, "tests_generated": 0, "tests_passed": 0, "retries_used": 0}
+
+    for file_path in files_to_process:
+        typer.secho(f"Generating tests for {file_path}...", fg=typer.colors.BLUE)
+        stats = orchestrator.process_file(file_path, output)
+        for k in total_stats:
+            total_stats[k] += stats.get(k, 0)
+
+    if total_stats["tests_passed"] > 0:
         typer.secho(
-            f"Success! Generated {stats['tests_passed']} tests (retries: {stats['retries_used']})",
+            f"\nSuccess! Generated {total_stats['tests_passed']} tests across {len(files_to_process)} files (total retries: {total_stats['retries_used']})",
             fg=typer.colors.GREEN
         )
-    elif stats["tests_generated"] > 0:
+    elif total_stats["tests_generated"] > 0:
         typer.secho(
-            f"Partial success. Generated {stats['tests_generated']} tests but they failed to pass.",
+            f"\nPartial success. Generated {total_stats['tests_generated']} tests but they failed to pass.",
             fg=typer.colors.YELLOW
         )
     else:
-        typer.secho("Failed to generate passing tests.", fg=typer.colors.RED)
+        typer.secho("\nFailed to generate any passing tests.", fg=typer.colors.RED)
         raise typer.Exit(1)
 
 @app.command()

@@ -1,9 +1,9 @@
 import os
 from unittest.mock import patch
-import pytest
-from pydantic import ValidationError
 
-from ai_testgen.config import Settings, get_settings
+import pytest
+
+from ai_testgen.config import get_settings
 
 
 def test_settings_load_successfully():

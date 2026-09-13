@@ -2,16 +2,16 @@ import sys
 from pathlib import Path
 
 import pytest
-from httpx import ASGITransport, Client
+from httpx import Client
 
 # Add src to path so imports work
 src_path = Path(__file__).parent.parent / "src"
 sys.path.insert(0, str(src_path))
 
+from fastapi.testclient import TestClient
+
 from sample_app.main import ITEMS_DB, app
 
-
-from fastapi.testclient import TestClient
 
 @pytest.fixture(scope="session")
 def unauthenticated_client():

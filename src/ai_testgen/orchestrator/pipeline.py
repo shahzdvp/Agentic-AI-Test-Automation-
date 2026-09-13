@@ -46,7 +46,7 @@ class FrameworkOrchestrator:
             module_name = ".".join(rel_path.with_suffix("").parts)
         except ValueError:
             module_name = target_file.stem
-            
+
         source_code = f"# Absolute Module Path: {module_name}\n" + target_file.read_text(encoding="utf-8")
 
         feedback = None

@@ -1,0 +1,28 @@
+name: "Agent Demo (Ghost QA)"
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [ "main" ]
+
+# Grant the agent permissions to push commits and leave comments
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  run-ai-qa:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # We need to fetch the PR branch so we can push back to it
+          ref: ${{ github.event.pull_request.head.ref }}
+          
+      - name: Run AI-TestGen Agent
+        # Uses the action.yml from the root of this very repository!
+        uses: ./
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          google_api_key: ${{ secrets.GOOGLE_API_KEY }}

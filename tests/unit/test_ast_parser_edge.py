@@ -1,15 +1,14 @@
-import pytest
-from pathlib import Path
+from unittest.mock import patch
+
 from ai_testgen.parser.ast_parser import PythonASTParser
 
-from unittest.mock import patch
 
 @patch("ai_testgen.parser.ast_parser.logger")
 def test_ast_parser_syntax_error(mock_logger, tmp_path):
     parser = PythonASTParser()
     bad_file = tmp_path / "bad.py"
     bad_file.write_text("def foo( :  # invalid python")
-    
+
     units = parser.parse(bad_file)
     assert len(units) == 0
     mock_logger.error.assert_called()
