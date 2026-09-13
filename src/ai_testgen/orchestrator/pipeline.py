@@ -45,6 +45,7 @@ class FrameworkOrchestrator:
             module_name = target_file.stem
 
         successful_suites: list[GeneratedTestSuite] = []
+        total_tests_generated = 0
         total_retries = 0
 
         # Process each unit granularly
@@ -56,6 +57,7 @@ class FrameworkOrchestrator:
             
             feedback = None
             passed = False
+            last_suite = None
             
             for attempt in range(self.max_retries + 1):
                 if attempt > 0:
@@ -63,29 +65,32 @@ class FrameworkOrchestrator:
                     total_retries += 1
 
                 try:
-                    suite = self.generator.generate(source_code, feedback=feedback)
+                    last_suite = self.generator.generate(source_code, feedback=feedback)
                 except Exception as e:
                     logger.error(f"Generation failed for {unit.name}: {e}")
                     break
 
                 # Test this specific suite in isolation
-                temp_code = self._assemble_test_file([suite])
+                temp_code = self._assemble_test_file([last_suite])
                 passed, error_report = self.runner.run_tests(temp_code, output_dir)
 
                 if passed:
                     logger.info(f"Tests for {unit.name} passed successfully!")
-                    successful_suites.append(suite)
+                    successful_suites.append(last_suite)
                     break
                 else:
                     logger.debug(f"Test failure output for {unit.name}:\n{error_report}")
                     feedback = error_report
+            
+            if last_suite:
+                total_tests_generated += len(last_suite.test_cases)
 
         # Combine all successful suites into the final file
-        total_cases = sum(len(suite.test_cases) for suite in successful_suites)
+        total_passed = sum(len(suite.test_cases) for suite in successful_suites)
         stats = {
             "total_units": len(units),
-            "tests_generated": total_cases,
-            "tests_passed": total_cases,
+            "tests_generated": total_tests_generated,
+            "tests_passed": total_passed,
             "retries_used": total_retries
         }
 

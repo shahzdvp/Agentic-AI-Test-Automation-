@@ -1,3 +1,4 @@
+import sys
 import subprocess
 import time
 from pathlib import Path
@@ -12,15 +13,16 @@ class PytestRunner(BaseTestRunner):
 
     def run_tests(self, test_code: str, context_dir: Path) -> tuple[bool, str]:
         """Write test code to a file and run pytest on it."""
-        temp_file = context_dir / "test_temp_auto_generated.py"
+        import uuid
+        temp_file = context_dir / f"test_temp_{uuid.uuid4().hex[:8]}.py"
         try:
             temp_file.write_text(test_code, encoding="utf-8")
 
-            logger.info(f"Running pytest on {temp_file}")
+            logger.info(f"Running pytest on {temp_file.name}")
             start_time = time.time()
 
             result = subprocess.run(
-                ['python', '-m', 'pytest', str(temp_file), '--tb=short', '-q'],
+                [sys.executable, '-m', 'pytest', str(temp_file), '--tb=short', '-q'],
                 capture_output=True,
                 text=True,
                 timeout=30

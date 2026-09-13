@@ -36,11 +36,11 @@ def commit_and_push(files_added: int):
         
     try:
         # Configure git identity for the bot
-        subprocess.run(["git", "config", "--global", "user.name", "AI TestGen Bot"], check=True)
-        subprocess.run(["git", "config", "--global", "user.email", "bot@ai-testgen.io"], check=True)
+        subprocess.run(["git", "config", "--local", "user.name", "AI TestGen Bot"], check=True)
+        subprocess.run(["git", "config", "--local", "user.email", "bot@ai-testgen.io"], check=True)
         
-        # Add generated tests
-        subprocess.run(["git", "add", "."], check=True)
+        # Add generated tests (safe path only)
+        subprocess.run(["git", "add", "tests/generated/"], check=True)
         
         # Check if there is anything to commit
         status = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True)

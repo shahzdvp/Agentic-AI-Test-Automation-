@@ -1,3 +1,4 @@
+import sys
 import subprocess
 from unittest.mock import patch
 
@@ -28,8 +29,10 @@ def test_runner_success(temp_dir):
         mock_run.assert_called_once()
         # Verify it passed the temp file correctly
         args = mock_run.call_args[0][0]
-        assert "pytest" in args
-        assert str(temp_dir / "test_temp_auto_generated.py") in args
+        assert args[0] == sys.executable
+        assert args[1] == "-m"
+        assert args[2] == "pytest"
+        assert any("test_temp_" in arg for arg in args)
 
 
 def test_runner_failure(temp_dir):

@@ -58,9 +58,13 @@ def generate(
     if source.is_file():
         files_to_process = [source]
     else:
+        ignore_dirs = {".git", "venv", ".venv", "build", "htmlcov", "node_modules", ".pytest_cache", ".ruff_cache"}
         files_to_process = [
             f for f in source.rglob("*.py")
-            if f.is_file() and not f.name.startswith("test_") and f.name != "__init__.py"
+            if f.is_file() 
+            and not f.name.startswith("test_") 
+            and f.name != "__init__.py"
+            and not any(part in ignore_dirs for part in f.parts)
         ]
         
     if not files_to_process:

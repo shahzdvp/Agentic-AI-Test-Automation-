@@ -16,7 +16,9 @@ dependencies = [
     "loguru>=0.7",
     "fastapi>=0.111",
     "uvicorn[standard]>=0.30",
-    "httpx>=0.27"
+    "httpx>=0.27",
+    "pytest>=8.0",
+    "PyGithub>=2.3.0"
 ]
 
 [project.scripts]
