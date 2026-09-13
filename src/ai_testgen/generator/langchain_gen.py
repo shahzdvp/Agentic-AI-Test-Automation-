@@ -42,6 +42,13 @@ class LangChainTestGenerator(BaseTestGenerator):
     def generate(self, source_code: str, feedback: str | None = None) -> GeneratedTestSuite:
         """Generate tests for source code, optionally incorporating feedback."""
         feedback_str = feedback if feedback else "None"
+        
+        # Basic heuristic token limit check (1 token ~ 4 characters).
+        # We skip files larger than ~100k tokens to prevent API crashes and cost overruns.
+        if len(source_code) > 400_000:
+            logger.error("Source code exceeds maximum allowed length (~100k tokens). Skipping.")
+            raise ValueError("Context window limit exceeded.")
+            
         logger.info(f"Generating tests for source code (length: {len(source_code)} chars) with model {self.model_name}")
 
         start_time = time.time()

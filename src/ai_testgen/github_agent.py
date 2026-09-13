@@ -16,17 +16,24 @@ from ai_testgen.runner.pytest_runner import PytestRunner
 
 def get_pr_files(gh: Github, repo_name: str, pr_number: int):
     """Fetch the list of modified .py files from the PR."""
-    repo = gh.get_repo(repo_name)
-    pr = repo.get_pull(pr_number)
-    
-    python_files = []
-    for file in pr.get_files():
-        if file.filename.endswith(".py") and not file.filename.startswith("test_") and not file.filename.startswith("examples/generated"):
-            # Only test files that were added or modified (not deleted)
-            if file.status in ["added", "modified"]:
-                python_files.append(Path(file.filename))
-                
-    return python_files, pr
+    from github import GithubException
+    try:
+        repo = gh.get_repo(repo_name)
+        pr = repo.get_pull(pr_number)
+        
+        python_files = []
+        for file in pr.get_files():
+            if file.filename.endswith(".py") and not file.filename.startswith("test_") and not file.filename.startswith("examples/generated"):
+                # Only test files that were added or modified (not deleted)
+                if file.status in ["added", "modified"]:
+                    python_files.append(Path(file.filename))
+                    
+        return python_files, pr
+    except GithubException as e:
+        logger.error(f"GitHub API Error: {e.status} - {e.data}")
+        if e.status == 403:
+            logger.error("Rate limit exceeded or permission denied.")
+        return [], None
 
 
 def commit_and_push(files_added: int):
@@ -94,7 +101,7 @@ def main():
         parser=PythonASTParser(),
         generator=LangChainTestGenerator(
             model_name=settings.model_name,
-            api_key=settings.google_api_key,
+            api_key=settings.google_api_key.get_secret_value(),
             temperature=settings.temperature
         ),
         runner=PytestRunner(),
@@ -130,8 +137,11 @@ def main():
                 f"The tests have been committed to your branch.\n\n"
                 f"**Files tested:**\n" + "\n".join([f"- `{f}`" for f in successful_files])
             )
-            pr.create_issue_comment(comment_body)
-            logger.info("Successfully pushed commits and left PR comment!")
+            try:
+                pr.create_issue_comment(comment_body)
+                logger.info("Successfully pushed commits and left PR comment!")
+            except Exception as e:
+                logger.error(f"Failed to leave PR comment (commits were pushed): {e}")
     else:
         logger.info("No passing tests could be generated for the modified files.")
 

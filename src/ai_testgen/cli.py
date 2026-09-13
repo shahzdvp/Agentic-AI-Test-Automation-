@@ -43,7 +43,7 @@ def generate(
     parser = PythonASTParser()
     generator = LangChainTestGenerator(
         model_name=model,
-        api_key=settings.google_api_key,
+        api_key=settings.google_api_key.get_secret_value(),
         temperature=settings.temperature
     )
     runner = PytestRunner()

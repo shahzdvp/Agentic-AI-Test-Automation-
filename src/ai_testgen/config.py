@@ -1,11 +1,11 @@
 from loguru import logger
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     """Configuration settings for AI TestGen."""
-    google_api_key: str = Field(validation_alias="GOOGLE_API_KEY")
+    google_api_key: SecretStr = Field(validation_alias="GOOGLE_API_KEY")
     model_name: str = Field(default='gemini-3.6-flash', validation_alias="AI_TESTGEN_MODEL")
     max_retries: int = Field(default=3, validation_alias="AI_TESTGEN_MAX_RETRIES")
     temperature: float = 0.1
