@@ -26,19 +26,16 @@ class FrameworkOrchestrator:
         self.max_retries = max_retries
 
     def process_file(self, target_file: Path, output_dir: Path) -> dict[str, Any]:
-        """Process a source file and generate a test file."""
+        """Process a source file by generating tests for each parsed unit."""
         logger.info(f"Processing file: {target_file}")
-
         start_time = time.time()
+
         units = self.parser.parse(target_file)
         logger.info(f"Found {len(units)} extractable code units.")
 
         if not units:
             logger.warning("No code units found. Skipping.")
             return {"total_units": 0, "tests_generated": 0, "tests_passed": 0, "retries_used": 0}
-
-        successful_suites: list[GeneratedTestSuite] = []
-        total_retries = 0
 
         try:
             abs_target = target_file.resolve()
@@ -47,52 +44,63 @@ class FrameworkOrchestrator:
         except ValueError:
             module_name = target_file.stem
 
-        source_code = f"# Absolute Module Path: {module_name}\n" + target_file.read_text(encoding="utf-8")
+        successful_suites: list[GeneratedTestSuite] = []
+        total_retries = 0
 
-        feedback = None
-        passed = False
+        # Process each unit granularly
+        for unit in units:
+            logger.info(f"Generating tests for unit: {unit.name} ({unit.unit_type})")
+            
+            # We pass only the unit's code to the LLM to save tokens and increase focus
+            source_code = f"# Absolute Module Path: {module_name}\n# Target Unit: {unit.name}\n\n{unit.code}"
+            
+            feedback = None
+            passed = False
+            
+            for attempt in range(self.max_retries + 1):
+                if attempt > 0:
+                    logger.info(f"Retry attempt {attempt}/{self.max_retries} for {unit.name}")
+                    total_retries += 1
 
-        for attempt in range(self.max_retries + 1):
-            if attempt > 0:
-                logger.info(f"Retry attempt {attempt}/{self.max_retries}")
-                total_retries += 1
+                try:
+                    suite = self.generator.generate(source_code, feedback=feedback)
+                except Exception as e:
+                    logger.error(f"Generation failed for {unit.name}: {e}")
+                    break
 
-            try:
-                suite = self.generator.generate(source_code, feedback=feedback)
-            except Exception as e:
-                logger.error(f"Generation failed: {e}")
-                break
+                # Test this specific suite in isolation
+                temp_code = self._assemble_test_file([suite])
+                passed, error_report = self.runner.run_tests(temp_code, output_dir)
 
-            provisional_code = self._assemble_test_file([suite])
+                if passed:
+                    logger.info(f"Tests for {unit.name} passed successfully!")
+                    successful_suites.append(suite)
+                    break
+                else:
+                    logger.debug(f"Test failure output for {unit.name}:\n{error_report}")
+                    feedback = error_report
 
-            passed, error_report = self.runner.run_tests(provisional_code, output_dir)
-
-            if passed:
-                successful_suites.append(suite)
-                break
-            else:
-                logger.debug(f"Test failure output:\n{error_report}")
-                feedback = error_report
-
+        # Combine all successful suites into the final file
+        total_cases = sum(len(suite.test_cases) for suite in successful_suites)
         stats = {
             "total_units": len(units),
-            "tests_generated": len(successful_suites[0].test_cases) if successful_suites else 0,
-            "tests_passed": len(successful_suites[0].test_cases) if passed and successful_suites else 0,
+            "tests_generated": total_cases,
+            "tests_passed": total_cases,
             "retries_used": total_retries
         }
 
-        if passed and successful_suites:
+        if successful_suites:
             final_code = self._assemble_test_file(successful_suites)
             test_file_name = f"test_{target_file.stem}.py"
             output_path = output_dir / test_file_name
 
             try:
                 output_path.write_text(final_code, encoding="utf-8")
-                logger.info(f"Successfully wrote test file to {output_path}")
+                logger.info(f"Successfully wrote combined test file to {output_path}")
             except Exception as e:
                 logger.error(f"Failed to write test file: {e}")
         else:
-            logger.error("Failed to generate passing tests after all retries.")
+            logger.error("Failed to generate passing tests for any units.")
 
         duration = time.time() - start_time
         logger.info(f"Processing completed in {duration:.2f} seconds.")
